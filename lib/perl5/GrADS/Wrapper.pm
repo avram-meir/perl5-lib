@@ -76,9 +76,9 @@ sub grads {
 }
 
 sub set_grads_exec {
-	unless(@_) { croak "GrADS::Wrapper::set_grads_exec() - ERROR: Argument required"; }
+	unless(@_)       { croak "GrADS::Wrapper::set_grads_exec() - ERROR: Argument required"; }
 	my $exec    = shift; chomp $exec;
-	unless(-x $exec) { "GrADS::Wrapper::set_grads_exec() - ERROR: You do not have executable permissions for $exec"; }
+	unless(-x $exec) { croak "GrADS::Wrapper::set_grads_exec() - ERROR: You do not have executable permissions for $exec"; }
 	$grads_exec = $exec;
 	return 0;
 }
