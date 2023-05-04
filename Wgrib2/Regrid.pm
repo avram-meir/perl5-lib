@@ -99,7 +99,7 @@ sub new {
     confess "Invalid input.byteorder param" unless($self->{byteorder} eq 'big_endian' or $self->{byteorder} eq 'little_endian');
     confess "Invalid input.headers param" unless($self->{header} eq 'header' or $self->{header} eq 'no_header');
 
-    my %allowed_gridtypes = 
+    my %allowed_gridtypes = ( 
         'conus0.125deg' => 1,
         'global1deg'    => 1,
     );
