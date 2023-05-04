@@ -104,7 +104,7 @@ sub new {
         'global1deg'    => 1,
     );
 
-    confess "Invalid output.gridtype param" unless(exists $allowed_gridtype{$self->{gridtype}});
+    confess "Invalid output.gridtype param" unless(exists $allowed_gridtypes{$self->{gridtype}});
 
     bless($self,$class);
     return $self;
