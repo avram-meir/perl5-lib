@@ -115,11 +115,11 @@ sub regrid {
     confess "Two arguments required" unless(@_ >= 2);
     my $input_fn    = shift;
     my $output_fn   = shift;
-    my $template    = $self->{'input.grib2template'};
-    my $byteorder   = $self->{'input.byteorder'};
-    my $missing     = $self->{'input.missing'};
-    my $header      = $self->{'input.headers'};
-    my $gridtype    = $self->{'output.gridtype'};
+    my $template    = $self->{'template'};
+    my $byteorder   = $self->{'byteorder'};
+    my $missing     = $self->{'missing'};
+    my $header      = $self->{'header'};
+    my $gridtype    = $self->{'gridtype'};
     my $work_dir    = File::Temp->newdir();
 
     # --- Convert input data to grib2 format ---
