@@ -68,6 +68,8 @@ Adam Allgood
 use strict;
 use warnings;
 use Carp qw(carp croak cluck confess);
+use File::Temp qw(:seekable);
+use File::Which qw(which);
 use Scalar::Util qw(blessed looks_like_number reftype);
 use List::MoreUtils qw(pairwise);
 use overload
@@ -91,6 +93,9 @@ sub new {
     my $class = shift;
     my $self  = {};
     $self->{latlons}  = [];
+    $self->{lats}     = [];
+    $self->{lons}     = [];
+    $self->{name}     = undef;
     $self->{values}   = [];
     $self->{missing}  = 'NaN';
     $self->{size}     = 0;
@@ -101,34 +106,50 @@ sub new {
 
     if($gridtype eq 'conus0.125deg') {
         my $lat = 20.0;
+        my $lon = 230.0;
 
         for(my $y=0; $y<241; $y++) {
-            my $lon = 230.0;
+            push(@{$self->{lats}},$lat);
+            $lat += 0.125;
+        }
 
-            for(my $x=0; $x<601; $x++) {
+        for(my $x=0; $x<601; $x++) {
+            push(@{$self->{lons}},$lon);
+            $lon += 0.125;
+        }
+
+        foreach $lat (@{$self->{lats}}) {
+
+            foreach $lon (@{$self->{lons}}) {
                 push(@{$self->{latlons}},join(',',$lat,$lon));
                 push(@{$self->{values}},$self->{missing});
-                $lon += 0.125;
             }
 
-            $lat += 0.125;
         }
 
         $self->{size} = scalar(@{$self->{latlons}});
     }
     elsif($gridtype eq 'global1deg') {
         my $lat = -90.0;
+        my $lon = 0.0;
 
         for(my $y=0; $y<181; $y++) {
-            my $lon = 0.0;
+            push(@{$self->{lats}},$lat);
+            $lat += 1.0;
+        }
 
-            for(my $x=0; $x<360; $x++) {
+        for(my $x=0; $x<360; $x++) {
+            push(@{$self->{lons}},$lon);
+            $lon += 1.0;
+        }
+
+        foreach $lat (@{$self->{lats}}) {
+
+            foreach $lon (@{$self->{lons}}) {
                 push(@{$self->{latlons}},join(',',$lat,$lon));
                 push(@{$self->{values}},$self->{missing});
-                $lon += 1.0;
             }
 
-            $lat += 1.0;
         }
 
         $self->{size} = scalar(@{$self->{latlons}});
@@ -152,9 +173,27 @@ sub get_latlons {
     else            { return $self->{latlons};   }
 }
 
+sub get_lats {
+    my $self = shift;
+    if(wantarray()) { return @{$self->{lats}}; }
+    else            { return $self->{lats};   }
+}
+
+sub get_lons {
+    my $self = shift;
+    if(wantarray()) { return @{$self->{lons}}; }
+    else            { return $self->{lons};   }
+}
+
 sub get_missing_value {
     my $self = shift;
     return $self->{missing};
+}
+
+sub get_name {
+    my $self = shift;
+    if(not defined($self->{name})) { carp "Name is undefined"; return undef; }
+    else                           { return $self->{name};                   }
 }
 
 sub get_values {
@@ -167,7 +206,7 @@ sub get_values {
 }
 
 sub get_values_missing_nans {
-    my $self = shift;
+    my $self   = shift;
     unless($self->{valset}) { carp "Values were never set by set_values()"; }
     my @values = @{$self->{values}};
     if(wantarray()) { return @values; }
@@ -185,7 +224,7 @@ sub init_values {
 
 sub set_missing_value {
     my $self         = shift;
-    unless(@_) { carp "Argument required - missing value was not updated"; return 1; }
+    unless(@_) { carp "Argument required - missing value was not updated"; return $self; }
     my $missing_val  = shift;
     my @values = @{$self->{values}};
     unless(looks_like_number($missing_val)) { confess "Non-numeric missing value is not allowed"; }
@@ -196,15 +235,84 @@ sub set_missing_value {
     return $self;
 }
 
+sub set_name {
+    my $self = shift;
+    unless(@_) { carp "Argument required - name was not set"; return $self; }
+    $self->{name} = shift;
+    return $self;
+}
+
 sub set_values {
     my $self = shift;
-    unless(@_)  { carp "Argument required - no values were set"; return 1; }
+    unless(@_)  { carp "Argument required - no values were set"; return $self; }
     my @values;
     if(@_ == 1) { @values = unpack('f*',shift); }
     else        { @values = @_;                 }
     unless(scalar(@values) == $self->{size}) { carp "Values do not match grid size - no values were set"; return 1; }
     @{$self->{values}} = @values;
     $self->{valset}    = 1;
+    return $self;
+}
+
+sub write_netcdf {
+    my $self  = shift;
+    my $ncgen = which('ncgen');
+    unless(defined $ncgen) { confess "Executable ncgen was not found on your system"; }
+    unless(@_) { carp "Argument required"; }
+    my $netcdf_file = shift;
+    my $cdl_fh      = File::Temp->new();
+    my $cdl_file    = $cdl_fh->filename();
+    $self->write_cdl($cdl_file);
+    unless(-s $cdl_file) { confess "There was a problem creating the CDL input data for netCDF generation"; }
+    my $err         = system("$ncgen -o $netcdf_file $cdl_file");
+
+    if($err)             {
+        if(-s $netcdf_file) { unlink($netcdf_file); }
+        confess "There was a problem creating the netCDF file";
+    }
+
+    return $self;
+}
+
+sub write_cdl {
+    my $self     = shift;
+    unless(@_) { carp "Argument required"; }
+    my $name     = undef;
+    if(defined $self->{name}) { $name = $self->{name}; }
+    else                      { carp 'Grid name is undefined - using "grid" as name'; $name = 'grid'; }
+    my $lonsz    = scalar(@{$self->{lons}});
+    my $latsz    = scalar(@{$self->{lats}});
+    my $missing  = $self->{missing};
+    my @values = @{$self->{values}};
+    foreach my $val (@values) { if($val =~ /nan/i) { $val = '_'; } }
+    my $cdl_file = shift;
+    open(CDLFILE,'>',$cdl_file) or confess "Could not open $cdl_file for writing - $!";
+
+    print CDLFILE <<"END_HEADER";
+netcdf $name {
+dimensions:
+	lon = $lonsz ;
+	lat = $latsz ;
+variables:
+	double lon(lon) ;
+		lon:units = "degrees_east" ;
+		lon:long_name = "Longitude" ;
+	double lat(lat) ;
+		lat:units = "degrees_north" ;
+		lat:long_name = "Latitude" ;
+	double $name(lat, lon) ;
+		$name:_FillValue = $missing ;
+data:
+
+END_HEADER
+
+    my $lonstr  = " lon = ".join(', ',@{$self->{lons}})." ;";
+    my $latstr  = " lat = ".join(', ',@{$self->{lats}})." ;";
+    my $datastr = " $name = ".join(', ',@values)." ;";
+    print CDLFILE "$lonstr\n\n";
+    print CDLFILE "$latstr\n\n";
+    print CDLFILE "$datastr\n}\n";
+    close(CDLFILE);
     return $self;
 }
 
