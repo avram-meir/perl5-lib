@@ -60,15 +60,16 @@ use Scalar::Util qw(blessed looks_like_number reftype);
 require File::Temp;
 use File::Temp ();
 use File::Temp qw(:seekable);
+use File::Which qw(which);
 use Config::Simple;
 
 my $package     = __FILE__;
 my $install_dir = $package =~ s/\/lib\/perl\/Wgrib2\/Regrid.pm//r;
-my $wgrib2;
+my $wgrib2      = undef;;
 
 BEGIN {
-        $wgrib2 = `which wgrib2`; chomp $wgrib2;
-        unless($wgrib2) { confess "Data::BinaryUtils requires wgrib2 to be installed on your system"; }
+        $wgrib2 = which('wgrib2');
+        unless(defined $wgrib2) { confess "Wgrib2::Regrid requires wgrib2 to be installed on your system"; }
 }
 
 sub new {
