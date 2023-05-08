@@ -65,7 +65,7 @@ use Config::Simple;
 
 my $package     = __FILE__;
 my $install_dir = $package =~ s/\/lib\/perl\/Wgrib2\/Regrid.pm//r;
-my $wgrib2      = undef;;
+my $wgrib2;
 
 BEGIN {
         $wgrib2 = which('wgrib2');
