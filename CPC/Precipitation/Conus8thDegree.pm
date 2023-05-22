@@ -43,7 +43,6 @@ sub new {
     my $method        = "$class\::new";
     $self->{class}    = $class;
     $self->{archive}  = undef;
-    $self->{storage}  = undef;
     $self->{gridtype} = 'conus0.125deg';
     $self->{missing}  = -999.0;
     my $arg           = undef;
@@ -64,7 +63,6 @@ sub new {
         }
 
         if(exists $arg->{ARCHIVE})      { $self->{archive} = $arg->{ARCHIVE}; }
-        if(exists $arg->{STORAGE})      { $self->{storage} = $arg->{STORAGE}; }
     }
 
     bless($self,$class);
@@ -91,13 +89,13 @@ sub set_params {
     }
 
     if(exists $arg->{ARCHIVE})      { $self->{archive} = $arg->{ARCHIVE}; }
-    if(exists $arg->{STORAGE})      { $self->{storage} = $arg->{STORAGE}; }
     return $self;
 }
 
 sub get_precip {
     my $self   = shift;
     my $class  = $self->{class};
+    my $method = "$class\::get_precip";
     confess "Two arguments required" unless(@_ >= 2);
     my $ndays  = shift;
     my $date   = shift;
@@ -111,8 +109,31 @@ sub get_precip {
 
     while($count < $ndays) {
         my $src_file = $day->printf($self->{archive});
+        croak "$method: $src_file not found" unless(-s $src_file);
+        open(SRC,'<',$src_file) or croak "$method: Could not open $src_file for reading - $!";
+        binmode(SRC);
+        my $src_str  = join('',<SRC>);
+        close(SRC);
+
+        # Precip is the first of two records
+
+        my @precip = unpack('f*',$src_str);
+        @precip    = splice(@precip,scalar(@precip)/2);
+
+        # Basic validation
+
+        foreach my $p (@precip) { if($p < 0) { $p = 0.0; } }
+
+        # Add daily precip to sum
+
+        $precip    = $precip + CPC::Grid->new($self->{gridtype})->set_values(@precip);
+        $day       = $day->calc($delta);
+        $count++;
     }
 
+    # Precip is in units of mm*10. Return as mm
+
+    return $precip/10.0;
 }
 
 1;
