@@ -196,6 +196,11 @@ sub get_name {
     else                           { return $self->{name};                   }
 }
 
+sub get_size {
+    my $self = shift;
+    return scalar(@{$self->{values}});
+}
+
 sub get_values {
     my $self   = shift;
     unless($self->{valset}) { carp "Values were never set by set_values()"; }
