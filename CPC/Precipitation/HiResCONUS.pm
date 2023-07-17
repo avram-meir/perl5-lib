@@ -44,7 +44,6 @@ sub get_precip {
     my $self     = shift;
     my $class    = $self->{class};
     my $method   = "$class\::get_precip";
-    my $err      = '';
     my $date     = undef;
     my $gridtype = undef;
     if(@_) { $date     = shift; }
@@ -54,23 +53,11 @@ sub get_precip {
     # --- Validate arguments ---
 
     my $precip   = undef;
-    eval   { $precip = CPC::Grid->new($gridtype); };
-
-    if($@) {
-        $err    = "$method: An invalid GRIDTYPE argument was supplied";
-        $precip = CPC::Grid->new('conus0.125deg');
-        return($precip,$err);
-    }
-
-    if(not defined $date) {
-        $err = "$method: DATE argument was not supplied";
-        return($precip,$err);
-    }
-
-    if(not $date->isa("Date::Manip::Date")) {
-        $err = "$method: The supplied DATE argument was not blessed in the Date::Manip::Date package";
-        return($precip,$err);
-    }
+    eval                                    { $precip = CPC::Grid->new($gridtype); };
+    if($@)                                  { return(CPC::Grid->new('conus0.125deg')->set_missing($self->{missing}),"$method: An invalid GRIDTYPE argument was supplied"); }
+    $precip->set_missing($self->{missing});
+    if(not defined $date)                   { return($precip,"$method: DATE argument was not supplied"); }
+    if(not $date->isa("Date::Manip::Date")) { return($precip,"$method: The supplied DATE argument was not a blessed Date::Manip::Date reference"); }
 
     # --- Find precip file in the archives ---
 
@@ -96,74 +83,59 @@ sub get_precip {
 
     }  # :ARCHIVE
 
-    if(not defined $input_file) {
-        $err = "$method: No file for $date was found in the archives";
-        return($precip,$err);
-    }
+    if(not defined $input_file) { return($precip,"$method: No file for $date was found in the archives"); }
 
     # --- Load precip data ---
 
+    my $input_fn;
+
     if($input_file =~ '.gz') {
-        my $fh    = File::Temp->new();
-        my $fname = $fh->filename();
-
-        unless(gunzip $input_file => $fname) {
-            $err = "$method: Could not unzip archive file $input_file - $GunzipError";
-            return($precip,$err);
-        }
-
-        unless(open(INPUT,'<',$fname)) {
-            $err = "$method: Could not open unzipped data file for reading (system permissions problem?)";
-            return($precip,$err);
-        }
-
-        binmode(INPUT);
-        my $input_str  = join('',<INPUT>);
-        close(INPUT);
-        my @input_vals = unpack('f*',$input_str);
-        my @vals       = splice(@input_vals,scalar(@input_vals)/2);
-        my $gridsize   = $precip->get_size();
-
-        if(scalar(@vals) != $gridsize) {
-            $err       = "$method: Invalid input grid size, got ".scalar(@vals)." expected $gridsize";
-            return($precip,$err);
-        }
-        else {
-            $precip->set_values(@vals);
-            $precip->set_missing_value(-999.0);
-        }
-
+        my $input_fh = File::Temp->new();
+        $input_fn    = $input_fh->filename();
+        unless(gunzip $input_file => $input_fn) { return($precip,"$method: Could not unzip archive file $input_file - $GunzipError"); }
     }
     else {
-
-        unless(open(INPUT,'<',$input_file)) {
-            $err = "$method: Could not open $input_file for reading (system permissions problem?)";
-            return($precip,$err);
-        }
-    
-        binmode(INPUT);
-        my $input_str  = join('',<INPUT>);
-        close(INPUT);
-        my @input_vals = unpack('f*',$input_str);
-        my @vals       = splice(@input_vals,scalar(@input_vals)/2);
-        my $gridsize   = $precip->get_size();
-
-        if(scalar(@vals) != $gridsize) {
-            $err       = "$method: Invalid input grid size, got ".scalar(@vals)." expected $gr
-idsize";
-            return($precip,$err);
-        }
-        else {
-            $precip->set_values(@vals);
-            $precip->set_missing_value(-999.0);
-        }
-
+        $input_fn = $input_file;
     }
+
+    unless(open(INPUT,'<',$input_fn)) { return($precip,"$method: Could not open $input_fn for reading (system permissions problem?)"); }
+    binmode(INPUT);
+    my $input_str  = join('',<INPUT>);
+    close(INPUT);
+    my @input_vals = unpack('f*',$input_str);
+    my @vals       = splice(@input_vals,scalar(@input_vals)/2);
 
     # --- Regrid if needed ---
 
-    
-
+    if($gridtype ne 'conus0.125deg') {
+        my $grib2template    = "$pkg_path../grib2templates/conus0.125deg.grb";
+        my $temp_fh          = File::Temp->new();
+        my $temp_fn          = $temp_fh->filename();
+        my $output_fh        = File::Temp->new();
+        my $output_fn        = $output_fh->filename();
+        unless(open(TEMP,'>',$temp_fn)) { return($precip,"$method: Could not open $temp_fn for writing (system permissions problem?)"); }
+        binmode(TEMP);
+        my $temp_str         = pack('f*',@vals);
+        print TEMP $temp_str;
+        close(TEMP);
+        my $params           = {};
+        $params->{'input.template'}  = $grib2template;
+        $params->{'input.byteorder'} = 'little_endian';
+        $params->{'input.missing'}   = -999.0;
+        $params->{'input.headers'}   = 'no_header';
+        $params->{'output.gridtype'} = $gridtype;
+        my $rg                       = Wgrib2::Regrid->new($params);
+        $rg->regrid($temp_fn,$output_fn);
+        unless(open(OUTPUT,'<',$output_fn)) { return($precip,"$method: Could not open $output_fn for reading (system permissions problem?)"); }
+        binmode(OUTPUT);
+        my $rg_string                = join('',<OUTPUT>);
+        @vals                        = unpack('f*',$rg_string);
+        $precip->set_values(@vals)->set_missing(9.999e+20);  # Default missing value from wgrib2
+        $precip->set_missing($self->{missing});
+    }
+    else {
+        $precip->set_values(@vals);
+    }
     return($precip,'');
 }
 
