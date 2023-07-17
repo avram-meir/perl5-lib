@@ -259,6 +259,21 @@ sub set_values {
     return $self;
 }
 
+sub write_binary {
+    my $self        = shift;
+    unless(@_) { confess "Argument required"; }
+    my $binary_file = shift;
+    my $missing     = $self->{missing};
+    my @values      = @{$self->{values}};
+    foreach my $val (@values) { if($val =~ /nan/i) { $val = '_'; } }
+    open(BINARY,'>',$binary_file) or confess "Could not open $binary_file for writing - $!";
+    binmode(BINARY);
+    my $binary_str  = pack('f*',@values);
+    print BINARY $binary_str;
+    close(BINARY);
+    return $self;
+}
+
 sub write_netcdf {
     my $self  = shift;
     my $ncgen = which('ncgen');
