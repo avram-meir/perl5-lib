@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-package CPC::Temperatures::HiRes;
+package CPC::Temperature::HiRes;
 
 =pod
 
@@ -133,12 +133,12 @@ sub _get_field {
         my $output_fh     = File::Temp->new();
         my $output_fn     = $output_fh->filename();
         my $params        = {};
-        $params->{'input.template'} = $grib2template;
-        $params->{'input.byteorder'} = 'little_endian';
-        $params->{'input.missing'}   = -999.0;
-        $params->{'input.headers'}   = 'no_header';
-        $params->{'output.gridtype'} = $gridtype;
-        my $rg                       = Wgrib2::Regrid->new($params);
+        $params->{'input.grib2template'} = $grib2template;
+        $params->{'input.byteorder'}     = 'little_endian';
+        $params->{'input.missing'}       = -999.0;
+        $params->{'input.headers'}       = 'no_header';
+        $params->{'output.gridtype'}     = $gridtype;
+        my $rg                           = Wgrib2::Regrid->new($params);
         $rg->regrid($input_fn,$output_fn);
         unless(open(TEMP,'<',$output_fn)) { return($temp,"$method: Could not open file holding regridded temperature data $output_fn for reading (system permissions problem?)"); }
         binmode(TEMP);
