@@ -233,7 +233,7 @@ sub set_missing_value {
     my $missing_val  = shift;
     my @values = @{$self->{values}};
     unless(looks_like_number($missing_val)) { confess "Non-numeric missing value is not allowed"; }
-    my $tolerance = 0.001*$missing_val;
+    my $tolerance = abs(0.001*$missing_val);
     foreach my $val (@values) { if(abs($missing_val - $val) <= $tolerance) { $val = 'NaN'; } }
     @{$self->{values}} = @values;
     $self->{missing}   = $missing_val;
@@ -254,6 +254,9 @@ sub set_values {
     if(@_ == 1) { @values = unpack('f*',shift); }
     else        { @values = @_;                 }
     unless(scalar(@values) == $self->{size}) { carp "Values do not match grid size - no values were set"; return 1; }
+    my $missing_val = $self->{missing};
+    my $tolerance = abs(0.001*$missing_val);
+    foreach my $val (@values) { if(abs($missing_val - $val) <= $tolerance) { $val = 'NaN'; } }
     @{$self->{values}} = @values;
     $self->{valset}    = 1;
     return $self;
@@ -265,7 +268,7 @@ sub write_binary {
     my $binary_file = shift;
     my $missing     = $self->{missing};
     my @values      = @{$self->{values}};
-    foreach my $val (@values) { if($val =~ /nan/i) { $val = '_'; } }
+    foreach my $val (@values) { if($val =~ /nan/i) { $val = $missing; } }
     open(BINARY,'>',$binary_file) or confess "Could not open $binary_file for writing - $!";
     binmode(BINARY);
     my $binary_str  = pack('f*',@values);
