@@ -103,7 +103,7 @@ sub _get_field {
     if($field =~ /tmax/i)                         { $fn = 0; }
     elsif($field =~ /tmin/i)                      { $fn = 2; }
     elsif($field =~ /tave/i or $field =~ /tavg/i) { $fn = 4; }
-    else { return($temp,"$method: $field is an invalid field"; }
+    else { return($temp,"$method: $field is an invalid field"); }
 
     my $split_dir = File::Temp->newdir();
     unless(open(SPLIT,"split -n 6 --verbose $input_file $split_dir/input 2<&1 |")) { return($temp,"$method: Could not split $input_file into 6 pieces for processing"); }
@@ -164,11 +164,11 @@ sub get_tavg {
     my $method   = "$class\::get_tavg";
     my $field    = "tavg";
     my $date     = '';
-    my $gribtype = undef;
+    my $gridtype = undef;
     if(@_) { $date     = shift; }
     if(@_) { $gridtype = shift; }
     else   { $gridtype = 'global6thdegree'; }
-    my($result,$err)   = $self->_get_field($method,$field,$date,$gribtype);
+    my($result,$err)   = $self->_get_field($method,$field,$date,$gridtype);
     return($result,$err);
 }
 
@@ -178,11 +178,11 @@ sub get_tmax {
     my $method   = "$class\::get_tmax";
     my $field    = "tmax";
     my $date     = '';
-    my $gribtype = undef;
+    my $gridtype = undef;
     if(@_) { $date     = shift; }
     if(@_) { $gridtype = shift; }
     else   { $gridtype = 'global6thdegree'; }
-    my($result,$err)   = $self->_get_field($method,$field,$date,$gribtype);
+    my($result,$err)   = $self->_get_field($method,$field,$date,$gridtype);
     return($result,$err);
 }
 
@@ -192,11 +192,11 @@ sub get_tmin {
     my $method   = "$class\::get_tmin";
     my $field    = "tmin";
     my $date     = '';
-    my $gribtype = undef;
+    my $gridtype = undef;
     if(@_) { $date     = shift; }
     if(@_) { $gridtype = shift; }
     else   { $gridtype = 'global6thdegree'; }
-    my($result,$err)   = $self->_get_field($method,$field,$date,$gribtype);
+    my($result,$err)   = $self->_get_field($method,$field,$date,$gridtype);
     return($result,$err);
 }
 
