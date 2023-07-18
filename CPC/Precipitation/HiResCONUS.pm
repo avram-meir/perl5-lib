@@ -78,7 +78,6 @@ sub get_precip {
         FILENAME: foreach my $filename (@filenames) {
             if(defined $input_file) { last FILENAME; }
             my $archive_file = $date->printf("$archive/$filename");
-            carp "Looking for: $archive_file";
             if(-s $archive_file) { $input_file = $archive_file; }
         }  # :FILENAME
 
