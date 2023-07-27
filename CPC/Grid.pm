@@ -262,6 +262,52 @@ sub set_values {
     return $self;
 }
 
+sub set_values_from_file {
+    my $self       = shift;
+    unless(@_) { carp "Argument required - no values were set"; return $self; }
+    my $input_file = shift;
+    unless(-s $input_file) { carp "File $input_file not found - no values were set"; return $self; }
+    my $format     = 'binary';
+    if(@_) { $format = shift; }
+
+    if($format =~ /binary/i) {
+        unless(open(INPUT,'<',$input_file)) { carp "Cannot open $input_file for reading - $! - no values were set"; return $self; }
+        binmode(INPUT);
+        my $input_str = join('',<INPUT>);
+        close(INPUT);
+        return $self->set_values($input_str);
+    }
+    elsif($format =~ /netcdf/i) {
+        my $cdl_fh    = File::Temp->new();
+        my $cdl_fn    = $cdl_fh->filename();
+        my $err       = system("ncdump -v lower $input_file | sed -e '1,/data:/d' -e '\$d' > $cdl_fn");
+        if($err) { carp "An error occurred using ncdump to parse $input_file - no values were set"; return $self; }
+        unless(open(CDL,'<',$cdl_fn)) { carp "Cannot open cdl dump for reading - $! - no values were set"; return $self; }
+        my $cdl_str   = do { local $/; <CDL> };
+        close(CDL);
+        $cdl_str      =~ s/\R//g;
+        my @vals      = split(',',$cdl_str);
+        my @dump      = split('=',$vals[0]);
+        $vals[0]      = pop(@dump);
+        $vals[-1]     =~ s/;//g;
+
+        for(my $i=0; $i<scalar(@vals); $i++) {
+            my $val    = $vals[$i];
+            $val       =~ s/^\s+//;
+            $val       =~ s/\s+$//;
+            if($val =~ '_' or $val =~ '-')  { $val = 'NaN'; }
+            unless(looks_like_number($val)) { $val = 'NaN'; }
+            $vals[$i] = $val;
+        }
+
+        return $self->set_values(@vals);
+    }
+    else {
+        carp "Format $format is not supported - no values were set"; return $self;
+    }
+
+}
+
 sub write_binary {
     my $self        = shift;
     unless(@_) { confess "Argument required"; }
