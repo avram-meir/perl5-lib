@@ -278,9 +278,11 @@ sub set_values_from_file {
         return $self->set_values($input_str);
     }
     elsif($format =~ /netcdf/i) {
+        my $field     = 'grid';
+        if(@_) { $field = shift; }
         my $cdl_fh    = File::Temp->new();
         my $cdl_fn    = $cdl_fh->filename();
-        my $err       = system("ncdump -v lower $input_file | sed -e '1,/data:/d' -e '\$d' > $cdl_fn");
+        my $err       = system("ncdump -v $field $input_file | sed -e '1,/data:/d' -e '\$d' > $cdl_fn");
         if($err) { carp "An error occurred using ncdump to parse $input_file - no values were set"; return $self; }
         unless(open(CDL,'<',$cdl_fn)) { carp "Cannot open cdl dump for reading - $! - no values were set"; return $self; }
         my $cdl_str   = do { local $/; <CDL> };
