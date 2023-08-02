@@ -71,6 +71,7 @@ use Carp qw(carp croak cluck confess);
 use File::Temp qw(:seekable);
 use File::Which qw(which);
 use Scalar::Util qw(blessed looks_like_number reftype);
+use List::Util qw(first);
 use List::MoreUtils qw(pairwise);
 use overload
     '+'        => \&_add,
@@ -331,9 +332,13 @@ sub write_netcdf {
     unless(defined $ncgen) { confess "Executable ncgen was not found on your system"; }
     unless(@_) { carp "Argument required"; }
     my $netcdf_file = shift;
+    my $format      = undef;
+    if(@_) { $format = shift;    }
+    else   { $format = 'double'; }
+    if(not defined(first { $format eq $_ } qw(char byte short int float double))) { carp "Invalid format arg - using default 'double'"; $format = 'double'; }
     my $cdl_fh      = File::Temp->new();
     my $cdl_file    = $cdl_fh->filename();
-    $self->write_cdl($cdl_file);
+    $self->write_cdl($cdl_file,$format);
     unless(-s $cdl_file) { confess "There was a problem creating the CDL input data for netCDF generation"; }
     my $err         = system("$ncgen -o $netcdf_file $cdl_file");
 
@@ -348,15 +353,19 @@ sub write_netcdf {
 sub write_cdl {
     my $self     = shift;
     unless(@_) { carp "Argument required"; }
+    my $cdl_file = shift;
     my $name     = undef;
     if(defined $self->{name}) { $name = $self->{name}; }
     else                      { carp 'Grid name is undefined - using "grid" as name'; $name = 'grid'; }
+    my $format   = undef;
+    if(@_) { $format = shift;    }
+    else   { $format = 'double'; }
+    if(not defined(first { $format eq $_ } qw(char byte short int float double))) { carp "Invalid format arg - using default 'double'"; $format = 'double'; }
     my $lonsz    = scalar(@{$self->{lons}});
     my $latsz    = scalar(@{$self->{lats}});
     my $missing  = $self->{missing};
     my @values = @{$self->{values}};
     foreach my $val (@values) { if($val =~ /nan/i) { $val = '_'; } }
-    my $cdl_file = shift;
     open(CDLFILE,'>',$cdl_file) or confess "Could not open $cdl_file for writing - $!";
 
     print CDLFILE <<"END_HEADER";
@@ -365,13 +374,13 @@ dimensions:
 	lon = $lonsz ;
 	lat = $latsz ;
 variables:
-	double lon(lon) ;
+	float lon(lon) ;
 		lon:units = "degrees_east" ;
 		lon:long_name = "Longitude" ;
-	double lat(lat) ;
+	float lat(lat) ;
 		lat:units = "degrees_north" ;
 		lat:long_name = "Latitude" ;
-	double $name(lat, lon) ;
+	$format $name(lat, lon) ;
 		$name:_FillValue = $missing ;
 data:
 
