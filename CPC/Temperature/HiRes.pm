@@ -128,7 +128,7 @@ sub _get_field {
 
     # --- Regrid if needed ---
 
-    if($gridtype ne 'global6thdegree') {
+    if($gridtype ne 'global6thdeg') {
         my $grib2template = "$pkg_path../grib2templates/global6thdegree.grb";
         my $output_fh     = File::Temp->new();
         my $output_fn     = $output_fh->filename();
