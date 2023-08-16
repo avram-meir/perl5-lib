@@ -155,6 +155,31 @@ sub new {
 
         $self->{size} = scalar(@{$self->{latlons}});
     }
+    elsif($gridtype eq 'global6thdeg') {
+        my $lat = -89.917;
+        my $lon = 0.083;
+
+        for(my $y=0; $y<1080; $y++) {
+            push(@{$self->{lats}},$lat);
+            $lat += 0.1666666667;
+        }
+
+        for(my $x=0; $x<2160; $x++) {
+            push(@{$self->{lons}},$lon);
+            $lon += 0.1666666667;
+        }
+
+        foreach $lat (@{$self->{lats}}) {
+
+            foreach $lon (@{$self->{lons}}) {
+                push(@{$self->{latlons}},join(',',$lat,$lon));
+                push(@{$self->{values}},$self->{missing});
+            }
+
+        }
+
+        $self->{size} = scalar(@{$self->{latlons}});
+    }
     else {
         confess "Gridtype $gridtype is not supported";
     }
