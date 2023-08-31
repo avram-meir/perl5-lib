@@ -95,7 +95,7 @@ sub _get_field {
 
     }  # :ARCHIVE
 
-    if(not defined $input_file) { return($temp,"$method: No file for $date was found in the archives"); }
+    if(not defined $input_file) { return($temp,$date->printf("$method: No file for %b %d, %Y was found in the archives")); }
 
     # --- Load temperature data ---
 

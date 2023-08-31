@@ -83,7 +83,7 @@ sub get_precip {
 
     }  # :ARCHIVE
 
-    if(not defined $input_file) { return($precip,"$method: No file for $date was found in the archives"); }
+    if(not defined $input_file) { return($precip,$date->printf("$method: No file for %b %d, %Y was found in the archives")); }
 
     # --- Load precip data ---
 
