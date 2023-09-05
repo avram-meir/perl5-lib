@@ -398,7 +398,12 @@ sub write_cdl {
     my $latsz    = scalar(@{$self->{lats}});
     my $missing  = $self->{missing};
     my @values = @{$self->{values}};
-    foreach my $val (@values) { if($val =~ /nan/i) { $val = '_'; } }
+
+    foreach my $val (@values) {
+        if($val =~ /nan/i) { $val = '_'; }
+        elsif($format eq 'double' or $format eq 'float') { $val = sprintf("%.5f",$val); }
+    }
+
     open(CDLFILE,'>',$cdl_file) or confess "Could not open $cdl_file for writing - $!";
 
     print CDLFILE <<"END_HEADER";
