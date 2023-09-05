@@ -357,6 +357,8 @@ sub write_netcdf {
     unless(defined $ncgen) { confess "Executable ncgen was not found on your system"; }
     unless(@_) { carp "Argument required"; }
     my $netcdf_file = shift;
+    my $field       = undef;
+    if(@_) { $field = shift; $self->set_name($field); }
     my $format      = undef;
     if(@_) { $format = shift;    }
     else   { $format = 'double'; }
