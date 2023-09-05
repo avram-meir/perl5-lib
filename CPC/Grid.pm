@@ -305,7 +305,7 @@ sub set_values_from_file {
     }
     elsif($format =~ /netcdf/i) {
         my $field     = 'grid';
-        if(@_) { $field = shift; }
+        if(@_) { $field = shift; $self->set_name($field); }
         my $cdl_fh    = File::Temp->new();
         my $cdl_fn    = $cdl_fh->filename();
         my $err       = system("ncdump -v $field $input_file | sed -e '1,/data:/d' -e '\$d' > $cdl_fn");
