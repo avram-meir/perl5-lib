@@ -253,6 +253,12 @@ sub init_values {
     return $self;
 }
 
+sub is_all_missing {
+    my $self = shift;
+    for(my $i=0; $i<$self->{size}; $i++) { if(${$self->{values}}[$i] !=~ /nan/i) { return 0; } }
+    return 1;
+}
+
 sub set_missing_value {
     my $self         = shift;
     unless(@_) { carp "Argument required - missing value was not updated"; return $self; }
