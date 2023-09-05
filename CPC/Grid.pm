@@ -255,7 +255,7 @@ sub init_values {
 
 sub is_all_missing {
     my $self = shift;
-    for(my $i=0; $i<$self->{size}; $i++) { if(${$self->{values}}[$i] !=~ /nan/i) { return 0; } }
+    for(my $i=0; $i<$self->{size}; $i++) { if(${$self->{values}}[$i] !~ /nan/i) { return 0; } }
     return 1;
 }
 
