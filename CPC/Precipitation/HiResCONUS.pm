@@ -13,6 +13,7 @@ use Date::Manip;
 use File::Basename qw(fileparse);
 use File::Temp qw(:seekable);
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
+use IO::Uncompress::Bunzip2 qw(bunzip2 $Bunzip2Error);
 use Scalar::Util qw(blessed looks_like_number reftype);
 my($pkg_name,$pkg_path,$pkg_suffix);
 BEGIN { ($pkg_name,$pkg_path,$pkg_suffix) = fileparse(__FILE__, qr/\.[^.]*/); }
@@ -68,6 +69,8 @@ sub get_precip {
         $basename.".RT",
         $basename.".gz",
         $basename.".RT.gz",
+        $basename.".bz2",
+        $basename.".RT.bz2",
     );
 
     my $input_file = undef;
@@ -93,6 +96,10 @@ sub get_precip {
     if($input_file =~ '.gz') {
         $input_fn    = $input_fh->filename();
         unless(gunzip $input_file => $input_fn) { return($precip,"$method: Could not unzip archive file $input_file - $GunzipError"); }
+    }
+    elsif($input_file =~ '.bz2') {
+        $input_fn    = $input_fh->filename();
+        unless(bunzip2 $input_file => $input_fn) { return($precip,"$method: Could not bunzip2 archive file $input_file - $Bunzip2Error"); }
     }
     else {
         $input_fn = $input_file;
