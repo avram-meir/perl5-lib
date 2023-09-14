@@ -329,7 +329,7 @@ sub set_values_from_file {
             my $val    = $vals[$i];
             $val       =~ s/^\s+//;
             $val       =~ s/\s+$//;
-            if($val =~ '_' or $val =~ '-')  { $val = 'NaN'; }
+            if($val =~ '_')  { $val = 'NaN'; }
             unless(looks_like_number($val)) { $val = 'NaN'; }
             $vals[$i] = $val;
         }
